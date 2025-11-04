@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Raportów Wpłat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="file"],
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-time-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .download-link {
+            display: inline-block;
+            margin: 10px 10px 10px 0;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .download-link:hover {
+            background: #218838;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Generator Raportów Wpłat</h1>
+        <p class="subtitle">System przetwarzania danych z Librusa</p>
+
+        <button class="nav-button" onclick="window.location.href='/manage_handlowcy'">
+            👥 Zarządzaj Handlowcami
+        </button>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="csvFile">Wybierz plik CSV z Librusa:</label>
+                <input type="file" id="csvFile" name="file" accept=".csv" required>
+            </div>
+
+            <div class="form-group">
+                <label>Zakres dat:</label>
+                <div class="date-time-group">
+                    <div>
+                        <label for="dateFrom">Data od:</label>
+                        <input type="date" id="dateFrom" required>
+                    </div>
+                    <div>
+                        <label for="dateTo">Data do:</label>
+                        <input type="date" id="dateTo" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Zakres godzin:</label>
+                <div class="date-time-group">
+                    <div>
+                        <label for="timeFrom">Godzina od:</label>
+                        <input type="time" id="timeFrom" value="00:00" required>
+                    </div>
+                    <div>
+                        <label for="timeTo">Godzina do:</label>
+                        <input type="time" id="timeTo" value="23:59" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit">🚀 Generuj Raport</button>
+        </form>
+
+        <div class="loader" id="loader"></div>
+        <div class="error" id="error"></div>
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        let uploadedFilename = null;
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('csvFile');
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const timeFrom = document.getElementById('timeFrom').value;
+            const timeTo = document.getElementById('timeTo').value;
+
+            // Ukryj poprzednie wyniki
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            try {
+                // Krok 1: Upload pliku
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const uploadResponse = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const uploadData = await uploadResponse.json();
+
+                if (!uploadData.success) {
+                    throw new Error(uploadData.error);
+                }
+
+                uploadedFilename = uploadData.filename;
+
+                // Krok 2: Przetwarzanie
+                const processResponse = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: uploadedFilename,
+                        date_from: dateFrom,
+                        date_to: dateTo,
+                        time_from: timeFrom,
+                        time_to: timeTo
+                    })
+                });
+
+                const processData = await processResponse.json();
+
+                if (!processData.success) {
+                    throw new Error(processData.error);
+                }
+
+                // Wyświetl wyniki
+                document.getElementById('loader').style.display = 'none';
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Raport wygenerowany pomyślnie!</strong>
+                        <p>Zakres: ${processData.date_range}</p>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <a href="/download/${processData.excel_file}" class="download-link">
+                            📥 Pobierz Excel
+                        </a>
+                        <a href="/download/${processData.pdf_file}" class="download-link">
+                            📄 Pobierz PDF
+                        </a>
+                    </div>
+                `;
+                resultsDiv.style.display = 'block';
+
+            } catch (error) {
+                document.getElementById('loader').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = '❌ Błąd: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

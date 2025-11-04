@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  librus-raport:
+    build: .
+    container_name: librus_raport_app
+    restart: always
+    ports:
+      - "5100:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+      - ./handlowcy.xlsx:/app/handlowcy.xlsx
+    environment:
+      - FLASK_ENV=production
+      - TZ=Europe/Warsaw
