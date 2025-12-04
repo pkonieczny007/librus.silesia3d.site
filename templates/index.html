@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -31,6 +31,14 @@
             color: #333;
             margin-bottom: 10px;
             text-align: center;
+        }
+
+        h2 {
+            color: #1f4788;
+            margin: 25px 0 15px 0;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
         }
 
         .subtitle {
@@ -52,7 +60,8 @@
 
         input[type="file"],
         input[type="date"],
-        input[type="time"] {
+        input[type="time"],
+        input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -94,8 +103,18 @@
             transform: translateY(0);
         }
 
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .nav-button {
             background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+        }
+
+        .secondary-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
         .results {
@@ -119,6 +138,14 @@
 
         .download-link:hover {
             background: #218838;
+        }
+
+        .download-link.zip {
+            background: #17a2b8;
+        }
+
+        .download-link.zip:hover {
+            background: #138496;
         }
 
         .error {
@@ -153,12 +180,99 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Checkboxy handlowców */
+        .handlowcy-section {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+        }
+
+        .handlowcy-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .handlowiec-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .handlowiec-item:hover {
+            background: #f0f0f0;
+        }
+
+        .handlowiec-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .handlowiec-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .select-all-container {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 6px;
+        }
+
+        /* Sekcja upload Excel handlowca */
+        .upload-handlowiec-section {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #fff3e0;
+            border-radius: 8px;
+            border: 2px solid #f5576c;
+        }
+
+        /* Pliki handlowców */
+        .handlowiec-files {
+            margin-top: 15px;
+        }
+
+        .handlowiec-file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .handlowiec-file-item .name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .handlowiec-file-item .links a {
+            margin-left: 10px;
+            padding: 5px 12px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="text-align: center; margin-bottom: 20px;">
-				<img src="{{ url_for('static', filename='logo.png') }}" alt="Silesia 3D Logo" style="max-width: 300px; height: auto;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="max-width: 300px; height: auto;">
         </div>
         <h1>📊 Generator Raportów Wpłat</h1>
         <p class="subtitle">System przetwarzania danych z Librusa</p>
@@ -207,10 +321,59 @@
         <div class="loader" id="loader"></div>
         <div class="error" id="error"></div>
         <div class="results" id="results"></div>
+
+        <!-- Sekcja wyboru handlowców -->
+        <div class="handlowcy-section" id="handlowcySection">
+            <h2>📋 Generuj raporty dla wybranych handlowców</h2>
+            <p style="color: #666; margin-bottom: 15px;">Zaznacz handlowców, dla których chcesz wygenerować indywidualne raporty Excel i PDF:</p>
+            
+            <div class="select-all-container">
+                <label class="handlowiec-item" style="background: transparent; padding: 0;">
+                    <input type="checkbox" id="selectAllHandlowcy" onchange="toggleAllHandlowcy()">
+                    <label for="selectAllHandlowcy" style="font-weight: 600;">Zaznacz wszystkich</label>
+                </label>
+            </div>
+            
+            <div class="handlowcy-list" id="handlowcyList">
+                <!-- Lista handlowców będzie wstawiona przez JavaScript -->
+            </div>
+            
+            <button class="secondary-button" onclick="generateHandlowcyReports()" id="generateHandlowcyBtn">
+                📥 Generuj raporty dla wybranych handlowców
+            </button>
+            
+            <div class="loader" id="loaderHandlowcy" style="display: none;"></div>
+            <div id="handlowcyResults"></div>
+        </div>
+
+        <!-- Sekcja wgrywania poprawionego Excela handlowca -->
+        <div class="upload-handlowiec-section" id="uploadHandlowiecSection">
+            <h2>📤 Wgraj poprawiony Excel handlowca</h2>
+            <p style="color: #666; margin-bottom: 15px;">Jeśli dokonałeś ręcznych poprawek w pliku Excel handlowca, wgraj go tutaj, aby wygenerować nowy PDF:</p>
+            
+            <div class="form-group">
+                <label for="handlowiecName">Nazwa handlowca:</label>
+                <input type="text" id="handlowiecName" placeholder="np. Jan Kowalski">
+            </div>
+            
+            <div class="form-group">
+                <label for="handlowiecExcel">Plik Excel (.xlsx):</label>
+                <input type="file" id="handlowiecExcel" accept=".xlsx">
+            </div>
+            
+            <button class="secondary-button" onclick="uploadHandlowiecExcel()">
+                🔄 Wygeneruj PDF z poprawionego Excela
+            </button>
+            
+            <div class="loader" id="loaderUpload" style="display: none;"></div>
+            <div id="uploadResults"></div>
+        </div>
     </div>
 
     <script>
         let uploadedFilename = null;
+        let currentSessionId = null;
+        let handlowcyList = [];
 
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -224,6 +387,8 @@
             // Ukryj poprzednie wyniki
             document.getElementById('results').style.display = 'none';
             document.getElementById('error').style.display = 'none';
+            document.getElementById('handlowcySection').style.display = 'none';
+            document.getElementById('uploadHandlowiecSection').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
 
             try {
@@ -265,6 +430,10 @@
                     throw new Error(processData.error);
                 }
 
+                // Zapisz dane sesji
+                currentSessionId = processData.session_id;
+                handlowcyList = processData.handlowcy || [];
+
                 // Wyświetl wyniki
                 document.getElementById('loader').style.display = 'none';
                 const resultsDiv = document.getElementById('results');
@@ -284,6 +453,13 @@
                 `;
                 resultsDiv.style.display = 'block';
 
+                // Pokaż sekcję handlowców
+                if (handlowcyList.length > 0) {
+                    renderHandlowcyList();
+                    document.getElementById('handlowcySection').style.display = 'block';
+                    document.getElementById('uploadHandlowiecSection').style.display = 'block';
+                }
+
             } catch (error) {
                 document.getElementById('loader').style.display = 'none';
                 const errorDiv = document.getElementById('error');
@@ -291,6 +467,156 @@
                 errorDiv.style.display = 'block';
             }
         });
+
+        function renderHandlowcyList() {
+            const listContainer = document.getElementById('handlowcyList');
+            listContainer.innerHTML = '';
+
+            handlowcyList.forEach((handlowiec, index) => {
+                const item = document.createElement('div');
+                item.className = 'handlowiec-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="handlowiec_${index}" value="${handlowiec}" class="handlowiec-checkbox">
+                    <label for="handlowiec_${index}">${handlowiec}</label>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function toggleAllHandlowcy() {
+            const selectAll = document.getElementById('selectAllHandlowcy').checked;
+            document.querySelectorAll('.handlowiec-checkbox').forEach(cb => {
+                cb.checked = selectAll;
+            });
+        }
+
+        async function generateHandlowcyReports() {
+            const selectedCheckboxes = document.querySelectorAll('.handlowiec-checkbox:checked');
+            const selectedHandlowcy = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+            if (selectedHandlowcy.length === 0) {
+                alert('Wybierz przynajmniej jednego handlowca!');
+                return;
+            }
+
+            document.getElementById('loaderHandlowcy').style.display = 'block';
+            document.getElementById('generateHandlowcyBtn').disabled = true;
+            document.getElementById('handlowcyResults').innerHTML = '';
+
+            try {
+                const response = await fetch('/generate_handlowiec_reports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        selected_handlowcy: selectedHandlowcy
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                // Wyświetl wyniki
+                let resultsHtml = `
+                    <div class="success" style="margin-top: 15px;">
+                        <strong>✅ Raporty wygenerowane pomyślnie!</strong>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <a href="/download/${data.zip_file}" class="download-link zip">
+                            📦 Pobierz wszystkie (ZIP)
+                        </a>
+                    </div>
+                    <div class="handlowiec-files">
+                        <h3 style="margin: 15px 0 10px 0; color: #333;">Pliki indywidualne:</h3>
+                `;
+
+                data.files.forEach(file => {
+                    resultsHtml += `
+                        <div class="handlowiec-file-item">
+                            <span class="name">${file.handlowiec}</span>
+                            <span class="links">
+                                <a href="/download/${file.excel}" class="download-link" style="padding: 6px 12px; font-size: 12px;">📥 Excel</a>
+                                <a href="/download/${file.pdf}" class="download-link" style="padding: 6px 12px; font-size: 12px;">📄 PDF</a>
+                            </span>
+                        </div>
+                    `;
+                });
+
+                resultsHtml += '</div>';
+
+                document.getElementById('handlowcyResults').innerHTML = resultsHtml;
+
+            } catch (error) {
+                document.getElementById('handlowcyResults').innerHTML = `
+                    <div class="error" style="display: block; margin-top: 15px;">
+                        ❌ Błąd: ${error.message}
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loaderHandlowcy').style.display = 'none';
+                document.getElementById('generateHandlowcyBtn').disabled = false;
+            }
+        }
+
+        async function uploadHandlowiecExcel() {
+            const fileInput = document.getElementById('handlowiecExcel');
+            const handlowiecName = document.getElementById('handlowiecName').value.trim();
+
+            if (!fileInput.files[0]) {
+                alert('Wybierz plik Excel!');
+                return;
+            }
+
+            if (!handlowiecName) {
+                alert('Podaj nazwę handlowca!');
+                return;
+            }
+
+            document.getElementById('loaderUpload').style.display = 'block';
+            document.getElementById('uploadResults').innerHTML = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('handlowiec_name', handlowiecName);
+
+                const response = await fetch('/upload_handlowiec_excel', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                document.getElementById('uploadResults').innerHTML = `
+                    <div class="success" style="margin-top: 15px;">
+                        <strong>✅ ${data.message}</strong>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <a href="/download/${data.pdf_file}" class="download-link">
+                            📄 Pobierz nowy PDF
+                        </a>
+                    </div>
+                `;
+
+            } catch (error) {
+                document.getElementById('uploadResults').innerHTML = `
+                    <div class="error" style="display: block; margin-top: 15px;">
+                        ❌ Błąd: ${error.message}
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loaderUpload').style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
